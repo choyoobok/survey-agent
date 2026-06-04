@@ -47,6 +47,7 @@ export interface Statistics {
 }
 
 export interface Report {
+  id?: number;
   surveyId: string;
   markdown: string;
   stats: Statistics;
