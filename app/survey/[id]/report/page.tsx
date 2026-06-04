@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getSurvey, getResponses, getReport, saveReport } from '@/lib/db';
 import { calculateStatistics, formatStats } from '@/lib/stats';
 import { generateMarkdownReport } from '@/lib/report';
 import { Survey, Statistics, Response } from '@/lib/types';
@@ -30,32 +29,37 @@ export default function ReportPage() {
 
   const loadReport = async () => {
     try {
-      const surveyData = await getSurvey(surveyId);
-      if (!surveyData) {
+      const surveyResponse = await fetch(`/api/survey/${surveyId}`);
+      if (!surveyResponse.ok) {
         setError('설문을 찾을 수 없습니다');
         return;
       }
-
-      const responses = await getResponses(surveyId);
-      if (responses.length === 0) {
-        setError('아직 응답이 없습니다');
-        return;
-      }
-
+      const surveyData = await surveyResponse.json();
       setSurvey(surveyData);
 
+      // 응답 조회
+      const responsesResponse = await fetch(`/api/survey/${surveyId}/responses`);
+      if (!responsesResponse.ok) {
+        setError('아직 응답이 없습니다');
+        setIsLoading(false);
+        return;
+      }
+      const responsesData = await responsesResponse.json();
+
       // 기존 리포트 확인
-      const existingReport = await getReport(surveyId);
-      if (existingReport) {
+      const reportResponse = await fetch(`/api/survey/${surveyId}/report`);
+      if (reportResponse.ok) {
+        const existingReport = await reportResponse.json();
         setStats(existingReport.stats);
         setInterpretation('');
         setMarkdown(existingReport.markdown);
         setShareLink(`${window.location.origin}/survey/${surveyId}/share`);
       } else {
         // 새로 분석
-        await analyzeResponses(surveyData, responses);
+        await analyzeResponses(surveyData, responsesData);
       }
     } catch (err) {
+      console.error('리포트 로드 오류:', err);
       setError('리포트 로드 중 오류가 발생했습니다');
     } finally {
       setIsLoading(false);
@@ -105,7 +109,16 @@ export default function ReportPage() {
 
       // 저장
       console.log('[분석] DB 저장 시작...');
-      await saveReport(surveyId, md, newStats);
+      const saveResponse = await fetch(`/api/survey/${surveyId}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markdown: md, stats: newStats })
+      });
+
+      if (!saveResponse.ok) {
+        throw new Error('리포트 저장 실패');
+      }
+
       console.log('[분석] DB 저장 완료');
       setShareLink(`${window.location.origin}/survey/${surveyId}/share`);
       console.log('[분석] 완료!');

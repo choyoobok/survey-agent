@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Anthropic } from '@anthropic-ai/sdk';
+import { createSurvey } from '@/lib/db-server';
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
@@ -52,14 +53,12 @@ JSON만 반환하세요. 다른 텍스트는 포함하지 마세요.`;
 
     let surveyJson = response.content[0].type === 'text' ? response.content[0].text : '';
 
-    // 마크다운 코드 블록 제거 (모든 변형 처리)
     surveyJson = surveyJson
       .replace(/^```json\s*/m, '')
       .replace(/^```\s*/m, '')
       .replace(/\s*```$/m, '')
       .trim();
 
-    // 가장 간단한 방법: 첫 { 부터 마지막 } 까지 추출
     const firstBrace = surveyJson.indexOf('{');
     const lastBrace = surveyJson.lastIndexOf('}');
 
@@ -79,7 +78,10 @@ JSON만 반환하세요. 다른 텍스트는 포함하지 마세요.`;
       throw new Error('JSON 형식이 올바르지 않습니다');
     }
 
-    return NextResponse.json(survey);
+    // Supabase에 저장
+    const savedSurvey = await createSurvey(survey);
+
+    return NextResponse.json(savedSurvey);
   } catch (error) {
     console.error('설문 생성 오류:', error);
     return NextResponse.json(

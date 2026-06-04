@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { getSurvey, addResponse } from '@/lib/db';
 import { Survey } from '@/lib/types';
 
 export default function ResponseForm() {
@@ -28,12 +27,13 @@ export default function ResponseForm() {
 
   const loadSurvey = async () => {
     try {
-      const data = await getSurvey(surveyId);
-      if (!data) {
+      const response = await fetch(`/api/survey/${surveyId}`);
+      if (!response.ok) {
         setError('설문을 찾을 수 없습니다');
-      } else {
-        setSurvey(data);
+        return;
       }
+      const data = await response.json();
+      setSurvey(data);
     } catch (err) {
       setError('설문 로드 중 오류가 발생했습니다');
     } finally {
@@ -64,7 +64,16 @@ export default function ResponseForm() {
     setError('');
 
     try {
-      await addResponse(surveyId, responses);
+      const response = await fetch(`/api/survey/${surveyId}/response`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(responses)
+      });
+
+      if (!response.ok) {
+        throw new Error('응답 저장 실패');
+      }
+
       router.push(`/survey/${surveyId}/report`);
     } catch (err) {
       setError('응답 저장 중 오류가 발생했습니다');

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { getSurveys } from '@/lib/db';
 import { Survey } from '@/lib/types';
 
 export default function Home() {
@@ -17,7 +16,8 @@ export default function Home() {
 
   const loadSurveys = async () => {
     try {
-      const data = await getSurveys();
+      const response = await fetch('/api/survey/list');
+      const data = await response.json();
       setSurveys(data);
     } catch (err) {
       console.error('설문 로드 중 오류:', err);
