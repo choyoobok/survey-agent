@@ -3,11 +3,12 @@ import { addResponse } from '@/lib/db-server';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
-    await addResponse(params.id, body);
+    await addResponse(id, body);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('응답 저장 오류:', error);

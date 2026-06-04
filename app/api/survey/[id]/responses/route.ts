@@ -3,10 +3,11 @@ import { getResponses } from '@/lib/db-server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const responses = await getResponses(params.id);
+    const { id } = await params;
+    const responses = await getResponses(id);
     return NextResponse.json(responses);
   } catch (error) {
     console.error('응답 조회 오류:', error);

@@ -3,10 +3,11 @@ import { getSurvey } from '@/lib/db-server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const survey = await getSurvey(params.id);
+    const { id } = await params;
+    const survey = await getSurvey(id);
     if (!survey) {
       return NextResponse.json(
         { error: '설문을 찾을 수 없습니다' },
